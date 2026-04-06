@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Activity Tracker Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="logo">
+          <div class="logo-dot"><span></span></div>
+          <div>
+            <div class="title">WebSync</div>
+            <div class="subtitle">Activity Dashboard</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="refreshBtn" class="btn">Refresh</button>
+          <button id="exportBtn" class="btn">Export CSV</button>
+          <button id="resetBtn" class="btn danger">Reset Data</button>
+        </div>
+      </header>
+
+      <section class="cards">
+        <div class="card">
+          <div class="k">Active</div>
+          <div id="activeSite" class="v">-</div>
+          <div id="activeFor" class="small">-</div>
+        </div>
+        <div class="card">
+          <div class="k">Tracked Sites</div>
+          <div id="trackedSites" class="v">0</div>
+          <div class="small">Total unique domains</div>
+        </div>
+        <div class="card">
+          <div class="k">Total Time</div>
+          <div id="totalTime" class="v">0s</div>
+          <div class="small">All-time tracked</div>
+        </div>
+        <div class="card">
+          <div class="k">Total Sessions</div>
+          <div id="totalSessions" class="v">0</div>
+          <div class="small">Tab focus changes counted</div>
+        </div>
+      </section>
+
+      <section class="split">
+        <div class="panel">
+          <div class="panel-title">Websites</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Website</th>
+                  <th>Total</th>
+                  <th>Today</th>
+                  <th>Sessions</th>
+                </tr>
+              </thead>
+              <tbody id="siteRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Selected website details</div>
+          <div id="selectedEmpty" class="empty">Click a website row to see day-wise breakdown.</div>
+          <div id="selectedPanel" class="hidden">
+            <div class="selected-header">
+              <div>
+                <div id="selectedDomain" class="selected-domain">-</div>
+                <div id="selectedTotals" class="small">-</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Time</th>
+                    <th>Sessions</th>
+                  </tr>
+                </thead>
+                <tbody id="dayRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer small">
+        Tracking is based on active tab focus (http/https). Keeps updating every minute in background.
+      </footer>
+    </div>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>
+

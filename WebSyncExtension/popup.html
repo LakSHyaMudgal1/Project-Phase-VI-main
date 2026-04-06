@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSync</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface-2: #1e2530;
+        --border: #2a3140;
+        --text: #e6edf3;
+        --text-muted: #7d8590;
+        --primary: #4f8ef7;
+        --primary-dim: rgba(79,142,247,0.12);
+        --danger: #f85149;
+        --danger-dim: rgba(248,81,73,0.12);
+        --success: #3fb950;
+        --radius: 10px;
+        --radius-sm: 7px;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        width: 400px;
+        padding: 14px;
+        font-size: 13px;
+      }
+
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .logo-dot {
+        width: 28px; height: 28px;
+        border-radius: 8px;
+        background: var(--primary-dim);
+        border: 1px solid rgba(79,142,247,0.3);
+        display: grid; place-items: center;
+      }
+      .logo-dot span {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--primary);
+        display: block;
+      }
+      .logo-text { font-size: 14px; font-weight: 600; }
+      .logo-sub { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+      /* Buttons */
+      .btn-row { display: flex; gap: 6px; margin-bottom: 10px; }
+      button {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 7px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: opacity 0.15s, background 0.15s;
+        background: var(--surface-2);
+        color: var(--text);
+      }
+      button:hover { opacity: 0.85; }
+      button.primary { background: var(--primary); color: #fff; border-color: transparent; flex: 1; }
+      button.secondary { flex: 1; }
+      button.danger { background: var(--danger-dim); color: var(--danger); border-color: rgba(248,81,73,0.25); flex: 1; }
+
+      /* Status */
+      #status {
+        font-size: 11px;
+        min-height: 14px;
+        margin-bottom: 8px;
+        color: var(--text-muted);
+      }
+      #status.ok { color: var(--success); }
+      #status.err { color: var(--danger); }
+
+      /* Active domain */
+      .active-bar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 7px 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+      }
+      .active-bar span { color: var(--primary); font-weight: 500; }
+
+      /* Metrics */
+      .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+      .metric {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 8px 10px;
+      }
+      .metric .k { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+      .metric .v { font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--text); }
+
+      /* Table */
+      .table-wrap {
+        max-height: 240px;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { position: sticky; top: 0; background: var(--surface-2); color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+      td { color: var(--text); }
+      tr:last-child td { border-bottom: none; }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">
+        <div class="logo-dot"><span></span></div>
+        <div>
+          <div class="logo-text">WebSync</div>
+          <div class="logo-sub">Activity Tracker</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="openDashboardBtn">Open Dashboard</button>
+    </div>
+    <div class="btn-row">
+      <button class="secondary" id="refreshBtn">Refresh</button>
+      <button class="danger" id="resetBtn">Reset Data</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="active-bar" id="activeDomain">Active: <span>—</span></div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="k">Sites</div>
+        <div id="trackedSites" class="v">0</div>
+      </div>
+      <div class="metric">
+        <div class="k">Time</div>
+        <div id="totalTime" class="v">0s</div>
+      </div>
+      <div class="metric">
+        <div class="k">Sessions</div>
+        <div id="totalSessions" class="v">0</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Website</th>
+            <th>Total</th>
+            <th>Today</th>
+            <th>Sessions</th>
+          </tr>
+        </thead>
+        <tbody id="siteRows"></tbody>
+      </table>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

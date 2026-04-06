@@ -1,0 +1,23 @@
+# Dependencies
+/Backend/node_modules
+/Frontend/node_modules
+/TabTrack/node_modules
+/WebSyncExtension/node_modules
+
+# Environment files
+/Backend/src/.env
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+/Frontend/dist
+/TabTrack/dist
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

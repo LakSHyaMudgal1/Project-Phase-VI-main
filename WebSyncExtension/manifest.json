@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Web Activity Time Tracker",
+  "version": "1.0.0",
+  "description": "Tracks which websites you use and for how long, with an analytics dashboard.",
+  "permissions": ["storage", "tabs", "alarms", "cookies"],
+  "host_permissions": ["http://localhost/*", "https://devconnect-backend.vercel.app/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Web Activity Tracker"
+  },
+  "options_page": "dashboard.html"
+}
