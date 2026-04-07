@@ -91,6 +91,10 @@ const Navbar = () => {
                       className="block px-4 py-3 text-sm hover:bg-white/5 transition">
                       Analytics
                     </Link>
+                    <Link to="/yesterday" onClick={() => setOpen(false)}
+                      className="block px-4 py-3 text-sm hover:bg-white/5 transition">
+                      Yesterday
+                    </Link>
                     <div className="px-4 py-3 border-t border-white/10">
                       <Button variant="danger" className="w-full" onClick={HandleLogout}>
                         Logout

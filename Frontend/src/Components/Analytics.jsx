@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import { BASE_URL } from "../utils/constants";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
@@ -264,6 +265,9 @@ const Analytics = () => {
         <Button variant="secondary" size="sm" onClick={() => fetchAnalytics(false)} disabled={refreshing || cooldown > 0}>
           {refreshing ? "Refreshing…" : cooldown > 0 ? `Refresh (${cooldown}s)` : "Refresh"}
         </Button>
+        <Link to="/yesterday">
+          <Button variant="secondary" size="sm">Yesterday</Button>
+        </Link>
       </div>
 
       {data.isFallback && (

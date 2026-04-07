@@ -1,111 +1,99 @@
-const openDashboardBtn = document.getElementById("openDashboardBtn");
-const refreshBtn = document.getElementById("refreshBtn");
-const resetBtn = document.getElementById("resetBtn");
-const statusEl = document.getElementById("status");
-const trackedSitesEl = document.getElementById("trackedSites");
-const totalTimeEl = document.getElementById("totalTime");
-const totalSessionsEl = document.getElementById("totalSessions");
-const activeDomainEl = document.getElementById("activeDomain");
-const siteRowsEl = document.getElementById("siteRows");
+const COLORS = ["#4f8ef7","#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#06b6d4"];
 
-function setStatus(msg, isError = false) {
-  statusEl.textContent = msg;
-  statusEl.className = isError ? "err" : "ok";
+function sendMessage(msg) {
+  return new Promise((resolve) => chrome.runtime.sendMessage(msg, (r) => resolve(r || { ok: false })));
 }
 
-function sendMessage(message) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      resolve(response || { ok: false, message: "No response" });
-    });
-  });
+function fmt(sec) {
+  const s = Math.max(0, Number(sec) || 0);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${ss}s`;
+  return `${ss}s`;
 }
 
-function formatSeconds(seconds) {
-  const s = Math.max(0, Number(seconds) || 0);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m ${sec}s`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
+function faviconUrl(domain) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
 }
 
-function renderAnalysis(analysis) {
+function render(analysis) {
   const totals = analysis?.totals || {};
   const active = analysis?.active || {};
-  const sites = analysis?.sites || [];
-  const trackingEnabled = analysis?.trackingEnabled;
+  const sites  = analysis?.sites  || [];
+  const on     = analysis?.trackingEnabled;
 
-  if (trackingEnabled === false) {
-    setStatus("Tracking OFF (login required). Log in to your website to start tracking.", true);
-  } else if (trackingEnabled === true) {
-    setStatus("Tracking ON (logged in).");
-  }
+  // status pill
+  const pill = document.getElementById("statusPill");
+  if (on === false) { pill.textContent = "OFF"; pill.className = "status-pill off"; }
+  else if (on === true) { pill.textContent = "ON"; pill.className = "status-pill on"; }
+  else { pill.textContent = "IDLE"; pill.className = "status-pill idle"; }
 
-  trackedSitesEl.textContent = String(totals.trackedSites || 0);
-  totalTimeEl.textContent = formatSeconds(totals.totalTimeSeconds || 0);
-  totalSessionsEl.textContent = String(totals.totalSessions || 0);
+  // metrics
+  document.getElementById("trackedSites").textContent = totals.trackedSites || 0;
+  document.getElementById("totalTime").textContent    = fmt(totals.totalTimeSeconds || 0);
+  document.getElementById("totalSessions").textContent = totals.totalSessions || 0;
 
+  // active bar
+  const favicon = document.getElementById("activeFavicon");
+  const domainEl = document.getElementById("activeDomain");
+  const timerEl  = document.getElementById("activeTimer");
   if (active.domain) {
-    activeDomainEl.innerHTML = `Active: <span>${active.domain}</span> (${formatSeconds(active.activeForSeconds || 0)})`;
+    favicon.src = faviconUrl(active.domain);
+    favicon.style.display = "block";
+    favicon.onerror = () => { favicon.style.display = "none"; };
+    domainEl.textContent = active.domain;
+    timerEl.textContent  = fmt(active.activeForSeconds || 0);
   } else {
-    activeDomainEl.innerHTML = `Active: <span>No website in focus</span>`;
+    favicon.style.display = "none";
+    domainEl.textContent  = on === false ? "Tracking off — log in first" : "No site in focus";
+    timerEl.textContent   = "";
   }
 
-  if (sites.length === 0) {
-    siteRowsEl.innerHTML = `<tr><td colspan="4">No tracked data yet.</td></tr>`;
+  // site list
+  const list = document.getElementById("sitesList");
+  const sorted = [...sites].sort((a, b) => (b.totalTimeSeconds || 0) - (a.totalTimeSeconds || 0));
+  const maxTime = sorted[0]?.totalTimeSeconds || 1;
+
+  if (sorted.length === 0) {
+    list.innerHTML = `<div class="empty">No tracked data yet.</div>`;
     return;
   }
 
-  siteRowsEl.innerHTML = sites
-    .map(
-      (s) => `
-      <tr>
-        <td>${s.domain}</td>
-        <td>${formatSeconds(s.totalTimeSeconds)}</td>
-        <td>${formatSeconds(s.todayTimeSeconds)}</td>
-        <td>${s.totalSessions}</td>
-      </tr>
-    `
-    )
-    .join("");
+  list.innerHTML = sorted.slice(0, 10).map((s, i) => {
+    const pct   = Math.round((s.totalTimeSeconds / maxTime) * 100);
+    const color = COLORS[i % COLORS.length];
+    return `
+      <div class="site-row">
+        <span class="site-rank">${i + 1}</span>
+        <img class="site-favicon" src="${faviconUrl(s.domain)}" alt=""
+          onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+        <div class="site-favicon-fallback" style="display:none">${s.domain[0]?.toUpperCase()}</div>
+        <div class="site-info">
+          <div class="site-domain">${s.domain}</div>
+          <div class="site-bar-wrap"><div class="site-bar" style="width:${pct}%;background:${color}"></div></div>
+          <div class="site-sessions">${s.totalSessions} sessions</div>
+        </div>
+        <span class="site-time" style="color:${color}">${fmt(s.totalTimeSeconds)}</span>
+      </div>`;
+  }).join("");
 }
 
-async function refreshAnalysis() {
+async function refresh() {
   const res = await sendMessage({ type: "get-analysis" });
-  if (res.ok) {
-    renderAnalysis(res.data);
-    return;
-  }
-  setStatus(res.message || "Failed to load analysis.", true);
+  if (res.ok) render(res.data);
 }
 
-openDashboardBtn.addEventListener("click", async () => {
-  const url = chrome.runtime.getURL("dashboard.html");
-  await chrome.tabs.create({ url });
+document.getElementById("openDashboardBtn").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
 
-refreshBtn.addEventListener("click", async () => {
-  await refreshAnalysis();
-  setStatus("Analysis refreshed.");
-});
+document.getElementById("refreshBtn").addEventListener("click", refresh);
 
-resetBtn.addEventListener("click", async () => {
-  const ok = confirm("Reset all tracked extension data?");
-  if (!ok) return;
+document.getElementById("resetBtn").addEventListener("click", async () => {
+  if (!confirm("Reset all tracked extension data?")) return;
   const res = await sendMessage({ type: "reset-analysis" });
-  if (res.ok) {
-    setStatus("Tracker data reset.");
-    await refreshAnalysis();
-  } else {
-    setStatus(res.message || "Reset failed.", true);
-  }
+  if (res.ok) await refresh();
 });
 
-async function init() {
-  await refreshAnalysis();
-  setInterval(refreshAnalysis, 5000);
-}
-
-init();
+refresh();
+setInterval(refresh, 5000);

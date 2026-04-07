@@ -7,6 +7,7 @@ const http = require("http");
 const app = require("./app");
 const connectDB = require("./config/db");
 const { initSocket } = require("./utils/socket");
+const { scheduleDailyReset } = require("./utils/dailyReset");
 
 const PORT = process.env.PORT || 3000;
 
@@ -18,6 +19,7 @@ initSocket(server);
 const startServer = async () => {
   try {
     await connectDB();
+    scheduleDailyReset();
 
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

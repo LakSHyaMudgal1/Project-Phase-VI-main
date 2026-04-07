@@ -9,6 +9,7 @@ import RoomWrapper from "./Components/RoomWrapper";
 import Invites from "./Components/Invites";
 import Profile from "./Components/Profile";
 import Analytics from "./Components/Analytics";
+import Yesterday from "./Components/Yesterday";
 
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="login" element={<Login/>} />
         <Route path="profile" element={<Profile/>} />
         <Route path="analytics" element={<Analytics/>} />
+        <Route path="yesterday" element={<Yesterday/>} />
         <Route path="create-room" element={<CreateRoom />} />
         <Route path="room/:roomId" element={<RoomWrapper />} />
         <Route path="invites" element={<Invites />} />

@@ -55,6 +55,32 @@ const initSocket = (server) => {
       socket.to(roomId).emit("screenShareStopped");
     });
 
+    // ── Video call signaling ──────────────────────────
+    // Notify room that this user joined the call
+    socket.on("videoCallJoin", ({ roomId, userName }) => {
+      socket.to(roomId).emit("videoCallUserJoined", { socketId: socket.id, userName });
+    });
+
+    // Notify room that this user left the call
+    socket.on("videoCallLeave", ({ roomId }) => {
+      socket.to(roomId).emit("videoCallUserLeft", { socketId: socket.id });
+    });
+
+    // Relay offer to a specific peer
+    socket.on("videoOffer", ({ to, offer, userName }) => {
+      io.to(to).emit("videoOffer", { from: socket.id, offer, userName });
+    });
+
+    // Relay answer to a specific peer
+    socket.on("videoAnswer", ({ to, answer }) => {
+      io.to(to).emit("videoAnswer", { from: socket.id, answer });
+    });
+
+    // Relay ICE candidate to a specific peer
+    socket.on("videoIceCandidate", ({ to, candidate }) => {
+      io.to(to).emit("videoIceCandidate", { from: socket.id, candidate });
+    });
+
     socket.on("disconnect", () => {
       console.log("User disconnected:", socket.id);
     });

@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Analytics = require("../models/analytics");
 const PublicAnalytics = require("../models/publicAnalytics");
+const AnalyticsHistory = require("../models/analyticsHistory");
 const userAuth = require("../middleware/auth");
 const Groq = require("groq-sdk");
 
@@ -201,6 +202,30 @@ Limit insights to 4 items max. Be direct and specific, mention actual site names
       return res.status(429).json({ error: "Rate limit hit. Please wait a moment and try again." });
     }
     res.status(500).json({ error: "Failed to generate insights: " + err.message });
+  }
+});
+
+analyticsRouter.get("/analytics/yesterday", userAuth, async (req, res) => {
+  try {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const date = d.toISOString().slice(0, 10);
+
+    const history = await AnalyticsHistory.findOne({ userId: req.user._id, date });
+
+    if (!history) {
+      return res.json({ tabs: [], timeIntervals: [], date, syncedAt: null, noData: true });
+    }
+
+    return res.json({
+      tabs: history.tabs || [],
+      timeIntervals: history.timeIntervals || [],
+      date,
+      syncedAt: history.syncedAt,
+      noData: false,
+    });
+  } catch (err) {
+    res.status(500).send("Failed to fetch yesterday's analytics: " + err.message);
   }
 });
 

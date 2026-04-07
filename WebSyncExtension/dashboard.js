@@ -1,169 +1,171 @@
-const refreshBtn = document.getElementById("refreshBtn");
-const exportBtn = document.getElementById("exportBtn");
-const resetBtn = document.getElementById("resetBtn");
-
-const activeSiteEl = document.getElementById("activeSite");
-const activeForEl = document.getElementById("activeFor");
-const trackedSitesEl = document.getElementById("trackedSites");
-const totalTimeEl = document.getElementById("totalTime");
-const totalSessionsEl = document.getElementById("totalSessions");
-
-const siteRowsEl = document.getElementById("siteRows");
-const selectedEmptyEl = document.getElementById("selectedEmpty");
-const selectedPanelEl = document.getElementById("selectedPanel");
-const selectedDomainEl = document.getElementById("selectedDomain");
-const selectedTotalsEl = document.getElementById("selectedTotals");
-const dayRowsEl = document.getElementById("dayRows");
+const COLORS = ["#4f8ef7","#6366f1","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#06b6d4"];
 
 let lastAnalysis = null;
 let selectedDomain = null;
 
-function sendMessage(message) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      resolve(response || { ok: false, message: "No response" });
-    });
-  });
+function sendMessage(msg) {
+  return new Promise((resolve) => chrome.runtime.sendMessage(msg, (r) => resolve(r || { ok: false })));
 }
 
-function formatSeconds(seconds) {
-  const s = Math.max(0, Number(seconds) || 0);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m ${sec}s`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
+function fmt(sec) {
+  const s = Math.max(0, Number(sec) || 0);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${ss}s`;
+  return `${ss}s`;
 }
 
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function faviconUrl(domain) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
 }
 
-function renderSelected(domain) {
+function esc(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c]));
+}
+
+function renderDetail(domain) {
   if (!lastAnalysis) return;
   const site = (lastAnalysis.sites || []).find((s) => s.domain === domain);
   if (!site) return;
 
   selectedDomain = domain;
-  selectedEmptyEl.classList.add("hidden");
-  selectedPanelEl.classList.remove("hidden");
+  document.getElementById("emptyState").classList.add("hidden");
+  document.getElementById("detailPanel").classList.remove("hidden");
 
-  selectedDomainEl.textContent = domain;
-  selectedTotalsEl.textContent = `Total: ${formatSeconds(site.totalTimeSeconds)} • Today: ${formatSeconds(
-    site.todayTimeSeconds
-  )} • Sessions: ${site.totalSessions}`;
+  const favicon = document.getElementById("detailFavicon");
+  const fallback = document.getElementById("detailFaviconFallback");
+  favicon.src = faviconUrl(domain);
+  favicon.style.display = "block";
+  fallback.textContent = domain[0]?.toUpperCase() || "?";
+
+  document.getElementById("detailDomain").textContent = domain;
+  document.getElementById("detailTotals").textContent =
+    `Total: ${fmt(site.totalTimeSeconds)} · Today: ${fmt(site.todayTimeSeconds)} · ${site.totalSessions} sessions`;
 
   const days = [...(site.days || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const dayRows = document.getElementById("dayRows");
   if (days.length === 0) {
-    dayRowsEl.innerHTML = `<tr><td colspan="3">No day-wise data yet.</td></tr>`;
+    dayRows.innerHTML = `<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:16px">No day-wise data yet.</td></tr>`;
     return;
   }
-  dayRowsEl.innerHTML = days
-    .map(
-      (d) => `
-      <tr>
-        <td>${escapeHtml(d.date)}</td>
-        <td>${formatSeconds(d.summary || 0)}</td>
-        <td>${d.counter || 0}</td>
-      </tr>
-    `
-    )
-    .join("");
+  dayRows.innerHTML = days.map((d) => `
+    <tr>
+      <td>${esc(d.date)}</td>
+      <td>${fmt(d.summary || 0)}</td>
+      <td>${d.counter || 0}</td>
+    </tr>`).join("");
+
+  // highlight selected row
+  document.querySelectorAll(".site-row").forEach((r) => {
+    r.classList.toggle("active", r.dataset.domain === domain);
+  });
 }
 
 function render(analysis) {
   lastAnalysis = analysis;
   const totals = analysis?.totals || {};
-  const active = analysis?.active || {};
-  const sites = analysis?.sites || [];
-  const trackingEnabled = analysis?.trackingEnabled;
+  const active  = analysis?.active  || {};
+  const sites   = analysis?.sites   || [];
+  const on      = analysis?.trackingEnabled;
 
-  trackedSitesEl.textContent = String(totals.trackedSites || 0);
-  totalTimeEl.textContent = formatSeconds(totals.totalTimeSeconds || 0);
-  totalSessionsEl.textContent = String(totals.totalSessions || 0);
+  // status pill
+  const pill = document.getElementById("statusPill");
+  if (on === false) { pill.textContent = "OFF"; pill.className = "status-pill off"; }
+  else if (on === true) { pill.textContent = "ON"; pill.className = "status-pill on"; }
+  else { pill.textContent = "IDLE"; pill.className = "status-pill idle"; }
 
-  if (trackingEnabled === false) {
-    activeSiteEl.textContent = "Tracking OFF";
-    activeForEl.textContent = "Log in to your website to start tracking.";
-  } else if (active.domain) {
-    activeSiteEl.textContent = active.domain;
-    activeForEl.textContent = `Active for: ${formatSeconds(active.activeForSeconds || 0)}`;
+  // cards
+  document.getElementById("trackedSites").textContent  = totals.trackedSites || 0;
+  document.getElementById("totalTime").textContent     = fmt(totals.totalTimeSeconds || 0);
+  document.getElementById("totalSessions").textContent = totals.totalSessions || 0;
+
+  // today total
+  const todaySec = sites.reduce((a, s) => a + (s.todayTimeSeconds || 0), 0);
+  document.getElementById("todayTime").textContent = fmt(todaySec);
+
+  // active bar
+  const favicon  = document.getElementById("activeFavicon");
+  const domainEl = document.getElementById("activeDomain");
+  const timerEl  = document.getElementById("activeTimer");
+  if (active.domain) {
+    favicon.src = faviconUrl(active.domain);
+    favicon.style.display = "block";
+    favicon.onerror = () => { favicon.style.display = "none"; };
+    domainEl.textContent = active.domain;
+    timerEl.textContent  = fmt(active.activeForSeconds || 0);
   } else {
-    activeSiteEl.textContent = "-";
-    activeForEl.textContent = "No website tab in focus";
+    favicon.style.display = "none";
+    domainEl.textContent  = on === false ? "Tracking off — log in first" : "No site in focus";
+    timerEl.textContent   = "";
   }
 
-  if (sites.length === 0) {
-    siteRowsEl.innerHTML = `<tr><td colspan="4">No tracked data yet.</td></tr>`;
+  // site list
+  const list   = document.getElementById("sitesList");
+  const sorted = [...sites].sort((a, b) => (b.totalTimeSeconds || 0) - (a.totalTimeSeconds || 0));
+  const maxTime = sorted[0]?.totalTimeSeconds || 1;
+
+  if (sorted.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--muted);font-size:12px">No tracked data yet.</div>`;
   } else {
-    siteRowsEl.innerHTML = sites
-      .map(
-        (s) => `
-        <tr class="row" data-domain="${escapeHtml(s.domain)}">
-          <td>${escapeHtml(s.domain)}</td>
-          <td>${formatSeconds(s.totalTimeSeconds)}</td>
-          <td>${formatSeconds(s.todayTimeSeconds)}</td>
-          <td>${s.totalSessions}</td>
-        </tr>
-      `
-      )
-      .join("");
+    list.innerHTML = sorted.map((s, i) => {
+      const pct   = Math.round((s.totalTimeSeconds / maxTime) * 100);
+      const color = COLORS[i % COLORS.length];
+      const isActive = s.domain === selectedDomain;
+      return `
+        <div class="site-row${isActive ? ' active' : ''}" data-domain="${esc(s.domain)}">
+          <span class="site-rank">${i + 1}</span>
+          <img class="site-favicon" src="${faviconUrl(s.domain)}" alt=""
+            onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+          <div class="site-favicon-fallback">${s.domain[0]?.toUpperCase() || '?'}</div>
+          <div class="site-info">
+            <div class="site-domain">${esc(s.domain)}</div>
+            <div class="site-bar-wrap"><div class="site-bar" style="width:${pct}%;background:${color}"></div></div>
+            <div class="site-sessions">${s.totalSessions} sessions · today ${fmt(s.todayTimeSeconds)}</div>
+          </div>
+          <span class="site-time" style="color:${color}">${fmt(s.totalTimeSeconds)}</span>
+        </div>`;
+    }).join("");
   }
 
-  if (selectedDomain) {
-    renderSelected(selectedDomain);
-  } else {
-    selectedEmptyEl.classList.remove("hidden");
-    selectedPanelEl.classList.add("hidden");
-  }
+  // re-render detail if one was selected
+  if (selectedDomain) renderDetail(selectedDomain);
 }
 
 async function refresh() {
   const res = await sendMessage({ type: "get-analysis" });
-  if (!res.ok) return;
-  render(res.data);
+  if (res.ok) render(res.data);
 }
 
 function exportCsv() {
   if (!lastAnalysis) return;
-  const rows = [["website", "total_time_seconds", "today_time_seconds", "total_sessions"]];
+  const rows = [["website","total_time_seconds","today_time_seconds","total_sessions"]];
   for (const s of lastAnalysis.sites || []) {
-    rows.push([s.domain, String(s.totalTimeSeconds || 0), String(s.todayTimeSeconds || 0), String(s.totalSessions || 0)]);
+    rows.push([s.domain, s.totalTimeSeconds || 0, s.todayTimeSeconds || 0, s.totalSessions || 0]);
   }
-  const csv = rows.map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(",")).join("\n");
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replaceAll('"','""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `web-activity-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `tabtrack-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  URL.revokeObjectURL(url);
 }
 
-refreshBtn.addEventListener("click", refresh);
-exportBtn.addEventListener("click", exportCsv);
-resetBtn.addEventListener("click", async () => {
-  const ok = confirm("Reset all tracked extension data?");
-  if (!ok) return;
+document.getElementById("refreshBtn").addEventListener("click", refresh);
+document.getElementById("exportBtn").addEventListener("click", exportCsv);
+document.getElementById("resetBtn").addEventListener("click", async () => {
+  if (!confirm("Reset all tracked extension data?")) return;
   await sendMessage({ type: "reset-analysis" });
   selectedDomain = null;
+  document.getElementById("emptyState").classList.remove("hidden");
+  document.getElementById("detailPanel").classList.add("hidden");
   await refresh();
 });
 
-siteRowsEl.addEventListener("click", (e) => {
-  const tr = e.target?.closest("tr[data-domain]");
-  if (!tr) return;
-  const domain = tr.getAttribute("data-domain");
-  if (!domain) return;
-  renderSelected(domain);
+document.getElementById("sitesList").addEventListener("click", (e) => {
+  const row = e.target?.closest(".site-row[data-domain]");
+  if (!row) return;
+  renderDetail(row.dataset.domain);
 });
 
 refresh();
 setInterval(refresh, 5000);
-
