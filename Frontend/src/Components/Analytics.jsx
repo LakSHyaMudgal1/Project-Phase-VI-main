@@ -126,7 +126,7 @@ const AIInsightsPanel = () => {
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-sm font-semibold flex items-center gap-2">✨ AI Insights</p>
-          <p className="text-xs text-mutedForeground mt-0.5">Powered by Gemini</p>
+          <p className="text-xs text-mutedForeground mt-0.5">Powered by Groq</p>
         </div>
         <Button variant="secondary" size="sm" onClick={generate} disabled={loading}>
           {loading ? "Analyzing…" : insights ? "Regenerate" : "Analyze my usage"}

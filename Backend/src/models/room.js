@@ -11,6 +11,7 @@ const roomSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Currently online members (cleared on leave, restored on rejoin)
     members: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -26,13 +27,20 @@ const roomSchema = new mongoose.Schema(
       },
     ],
 
-    // Everyone who was ever invited — persists through leave/rejoin until owner leaves
+    // Everyone who was ever invited — persists through leave/rejoin
+    // Room stays alive until owner explicitly deletes it
     permanentMembers: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
+
+    // Soft-delete flag — only set when owner deletes the room
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
 
     activityLog: [
       {

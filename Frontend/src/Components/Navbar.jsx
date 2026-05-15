@@ -5,12 +5,13 @@ import { BASE_URL } from '../utils/constants';
 import { removeUser } from '../utils/userSlice';
 import axios from 'axios';
 import Button from "./ui/Button";
-import Input from "./ui/Input";
+import { useSearch } from '../context/SearchContext';
 
 const Navbar = () => {
   const user = useSelector((store) => store.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { openSearch } = useSearch();
 
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -51,9 +52,23 @@ const Navbar = () => {
           {user && (
             <div className="flex items-center gap-3 relative">
 
-              {/* Search */}
+              {/* Search trigger button — replaces the old non-functional Input */}
               <div className="hidden md:block w-[220px]">
-                <Input placeholder="Search…" />
+                <button
+                  onClick={openSearch}
+                  className="w-full h-10 flex items-center gap-2 px-3 rounded-2xl bg-white/5 border border-white/10 text-mutedForeground hover:bg-white/10 transition text-sm"
+                  title="Search the web (Ctrl+G)"
+                >
+                  {/* Search icon */}
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" strokeLinecap="round" />
+                  </svg>
+                  <span className="flex-1 text-left text-sm">Search…</span>
+                  <kbd className="text-[10px] bg-white/10 border border-white/10 px-1.5 py-0.5 rounded-md font-mono leading-none">
+                    Ctrl+G
+                  </kbd>
+                </button>
               </div>
 
               {/* Avatar + dropdown */}
@@ -87,6 +102,10 @@ const Navbar = () => {
                       className="block px-4 py-3 text-sm hover:bg-white/5 transition">
                       Invites
                     </Link>
+                    <Link to="/timetable" onClick={() => setOpen(false)}
+                      className="block px-4 py-3 text-sm hover:bg-white/5 transition">
+                      Timetable
+                    </Link>
                     <Link to="/analytics" onClick={() => setOpen(false)}
                       className="block px-4 py-3 text-sm hover:bg-white/5 transition">
                       Analytics
@@ -95,6 +114,18 @@ const Navbar = () => {
                       className="block px-4 py-3 text-sm hover:bg-white/5 transition">
                       Yesterday
                     </Link>
+                    <button
+                      onClick={() => { openSearch(); setOpen(false); }}
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition"
+                    >
+                      Search Web
+                    </button>
+                    {user?.role === "admin" && (
+                      <Link to="/admin" onClick={() => setOpen(false)}
+                        className="block px-4 py-3 text-sm text-red-300 hover:bg-red-500/10 transition border-t border-white/10">
+                        Admin Panel
+                      </Link>
+                    )}
                     <div className="px-4 py-3 border-t border-white/10">
                       <Button variant="danger" className="w-full" onClick={HandleLogout}>
                         Logout

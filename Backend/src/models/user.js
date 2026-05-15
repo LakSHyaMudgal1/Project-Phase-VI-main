@@ -69,6 +69,12 @@ const userSchema= new mongoose.Schema({
         type: String,
         default: "This is the default about data"
     },
+
+    role: {
+        type: String,
+        enum: ["student", "admin"],
+        default: "student",
+    },
 },
 
 {

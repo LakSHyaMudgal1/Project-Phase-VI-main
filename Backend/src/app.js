@@ -8,6 +8,8 @@ const authRouter = require("./routes/auth");
 const roomRouter = require("./routes/room");
 const profileRouter = require("./routes/profile");
 const analyticsRouter = require("./routes/analytics");
+const searchRouter = require("./routes/search");
+const timetableRouter = require("./routes/timetable");
 
 const app = express();
 
@@ -46,6 +48,8 @@ app.use("/", authRouter);
 app.use("/", profileRouter);
 app.use("/", analyticsRouter);
 app.use("/room", roomRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/timetable", timetableRouter);
 
 
 app.get("/", (req, res) => {

@@ -15,6 +15,19 @@ profileRouter.get('/profile', userAuth, async(req, res)=>{
     }
 })
 
+// ── DEV UTILITY: promote yourself to admin ────────────────────────────────
+// Hit this once while logged in: POST /profile/make-admin
+// Remove this route before going to production.
+profileRouter.post('/profile/make-admin', userAuth, async (req, res) => {
+    try {
+        req.user.role = "admin";
+        await req.user.save();
+        res.json({ message: `${req.user.firstName} is now an admin.`, role: req.user.role });
+    } catch (err) {
+        res.status(400).send(err.message);
+    }
+});
+
 profileRouter.put('/profile/edit', userAuth, async(req, res)=>{
    try {
     const loggedInUser= req.user;
